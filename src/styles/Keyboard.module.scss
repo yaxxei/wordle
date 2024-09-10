@@ -1,0 +1,12 @@
+.keyboard {
+  display: grid;
+  place-items: center;
+  gap: 5px;
+  margin-bottom: 2rem;
+
+  div {
+    display: grid;
+    gap: 5px;
+    grid-template-columns: repeat(10, auto);
+  }
+}

@@ -1,0 +1,15 @@
+.header {
+  display: flex;
+  align-items: center;
+  height: 60px;
+
+  ::after {
+    content: "";
+    background-color: #3a3a3c;
+    height: 1px;
+    position: absolute;
+    top: 70px;
+    left: 0;
+    right: 0;
+  }
+}
