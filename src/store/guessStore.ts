@@ -2,11 +2,12 @@ import { makeAutoObservable } from "mobx";
 import type { IWord } from "../types/types";
 
 class GuessStore {
-  guessWord = "HELLO";
+  hiddenWord = "HELLO";
 
   attemps = 6;
   wordLength = 5;
   isEnd = false;
+  isGuessed = false;
 
   words: IWord[] = Array.from({ length: this.attemps }, () => ({
     isSent: false,
@@ -16,20 +17,38 @@ class GuessStore {
     })),
   }));
 
+  streak = 0;
+
   constructor() {
     makeAutoObservable(this);
   }
 
-  async randomWord() {
+  async randomWord(): Promise<string> {
     const res = await fetch(
       "https://random-word-api.herokuapp.com/word?length=5"
     );
     const json = await res.json();
-    this.guessWord = (json[0] as string).toUpperCase();
-    // console.log((json[0] as string).toUpperCase());
+    this.hiddenWord = (json[0] as string).toUpperCase();
+    console.log(this.hiddenWord);
+    return this.hiddenWord;
   }
 
-  writeWord(letter: string): IWord[] {
+  async restart() {
+    this.words = this.words.map(
+      (row): IWord => ({
+        ...row,
+        letters: row.letters.map((l) => ({ ...l, letter: "", status: "" })),
+        isSent: false,
+      })
+    );
+
+    this.randomWord();
+
+    this.isEnd = false;
+    this.isGuessed = false;
+  }
+
+  writeWord(letter: string) {
     const row = this.words.find((w) => !w.isSent);
     if (!row) return this.words;
 
@@ -37,7 +56,6 @@ class GuessStore {
     if (!cell) return this.words;
 
     cell.letter = letter;
-    return this.words;
   }
 
   eraseWord() {
@@ -53,67 +71,42 @@ class GuessStore {
     cell.letter = "";
   }
 
-  enterWord(): boolean {
+  enterWord() {
     const row = this.words.find((w) => !w.isSent);
-    if (!row) return false;
+    if (!row) return;
 
-    if (row.letters.find((l) => !l.letter)) return false;
+    if (row.letters.find((l) => !l.letter)) return;
 
     const word = row.letters.map((l) => l.letter).join("");
-    // конченая хуита, я заебался с этой залупой, ни хуя не работает
-    // let isExist = true;
-    // this.isWordExist(word)
-    //   .then((exist) => {
-    //     isExist = exist;
-    //   })
-    //   .catch(() => {});
-
-    // if (!isExist) {
-    //   console.log("Word not found");
-    //   return false;
-    // }
 
     row.isSent = true;
-
     row.letters.forEach((l, i) => {
-      const isInWord = this.guessWord.includes(l.letter);
+      const isInWord = this.hiddenWord.includes(l.letter);
       if (isInWord) {
         l.status = "misplaced";
       } else {
         l.status = "incorrect";
       }
 
-      const isCorrect = l.letter === this.guessWord[i];
+      const isCorrect = l.letter === this.hiddenWord[i];
       if (isCorrect) {
         l.status = "correct";
       }
     });
 
-    if (
-      word === this.guessWord ||
-      this.words[this.wordLength].isSent === true
-    ) {
+    if (word === this.hiddenWord) {
       this.isEnd = true;
+      this.isGuessed = true;
+      this.streak++;
+      return;
     }
-
-    return true;
+    if (this.words[this.wordLength].isSent === true) {
+      this.isEnd = true;
+      this.isGuessed = false;
+      this.streak = 0;
+      return;
+    }
   }
-
-  // private async isWordExist(word: string): Promise<boolean> {
-  //   try {
-  //     const response = await fetch(
-  //       `https://api.dictionaryapi.dev/api/v2/entries/en/${word}`
-  //     );
-  //     if (!response.ok) {
-  //       console.log("Word not found");
-  //       return false;
-  //     }
-  //     return true;
-  //   } catch (error) {
-  //     console.error("Error checking word existence:", error);
-  //     return false;
-  //   }
-  // }
 }
 
 export default new GuessStore();
